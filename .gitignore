@@ -1,6 +1,13 @@
-venv/
+# IDE
+.idea/
+.vscode/
+
+# Python
 __pycache__/
 *.pyc
+venv/
+.env
+
+
 *.log
 scan_results.json
-.env
