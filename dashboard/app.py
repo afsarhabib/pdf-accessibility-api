@@ -1,11 +1,34 @@
 import streamlit as st
 import requests
 import pandas as pd
+import altair as alt
 
 # -------------------------------
-# Config
+# Page Config
 # -------------------------------
 st.set_page_config(layout="wide", page_title="PDF Accessibility Dashboard")
+
+# -------------------------------
+# Custom CSS (Cards + Styling)
+# -------------------------------
+st.markdown("""
+    <style>
+    .card {
+        padding: 20px;
+        border-radius: 12px;
+        background-color: #f9fafb;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 15px;
+    }
+    .metric {
+        text-align: center;
+        padding: 10px;
+        border-radius: 10px;
+        background-color: white;
+        box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 st.title("📄 PDF Accessibility Dashboard")
 
@@ -13,7 +36,6 @@ st.title("📄 PDF Accessibility Dashboard")
 # Fetch API Data
 # -------------------------------
 try:
-    # response = requests.get("http://localhost:8000/report")
     response = requests.get("http://app:8000/report")
     report = response.json()
 except:
@@ -30,49 +52,82 @@ if "message" in report:
 col1, col2 = st.columns(2)
 
 with col1:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader("📊 Summary")
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Total Files", report["total_files"])
-    c2.metric("Total Issues", report["total_issues"])
-    c3.metric("Fixed Issues", report.get("total_fixed", 0))
-    c4.metric("Avg Score", f'{report["average_score"]}%')
+
+    c1.markdown(f'<div class="metric">📁<br><b>{report["total_files"]}</b><br>Total Files</div>', unsafe_allow_html=True)
+    c2.markdown(f'<div class="metric">⚠️<br><b>{report["total_issues"]}</b><br>Total Issues</div>', unsafe_allow_html=True)
+    c3.markdown(f'<div class="metric">✅<br><b>{report.get("total_fixed",0)}</b><br>Fixed</div>', unsafe_allow_html=True)
+    c4.markdown(f'<div class="metric">📈<br><b>{report["average_score"]}%</b><br>Avg Score</div>', unsafe_allow_html=True)
 
     if report["total_issues"] == 0:
         st.success("All files compliant 🎉")
     else:
         st.warning(f"{report['total_issues']} issues detected")
 
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# -------------------------------
+# Status Chart (Improved)
+# -------------------------------
 with col2:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader("📌 Status Distribution")
 
     status_df = pd.DataFrame.from_dict(
         report["status_summary"], orient="index", columns=["count"]
-    )
+    ).reset_index()
 
-    st.bar_chart(status_df)
+    status_df.columns = ["status", "count"]
+
+    chart = alt.Chart(status_df).mark_bar().encode(
+        x=alt.X("status", title="Status"),
+        y=alt.Y("count", title="Count"),
+        color=alt.Color("status", scale=alt.Scale(
+            domain=["compliant", "partial", "non-compliant"],
+            range=["green", "orange", "red"]
+        ))
+    ).properties(height=300)
+
+    st.altair_chart(chart, use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # -------------------------------
-# BOTTOM ROW → Worst + Trends
+# Bottom Row → Worst + Trends
 # -------------------------------
 col3, col4 = st.columns(2)
 
 with col3:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader("⚠️ Worst File")
     st.error(report["worst_file"])
+    st.markdown('</div>', unsafe_allow_html=True)
 
 with col4:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader("📈 Issue Trends")
 
     if report.get("issue_trends"):
-        st.bar_chart(pd.Series(report["issue_trends"]))
+        trend_df = pd.Series(report["issue_trends"]).reset_index()
+        trend_df.columns = ["issue", "count"]
+
+        trend_chart = alt.Chart(trend_df).mark_bar().encode(
+            x=alt.X("count", title="Count"),
+            y=alt.Y("issue", sort="-x"),
+            color=alt.value("#4c78a8")
+        ).properties(height=300)
+
+        st.altair_chart(trend_chart, use_container_width=True)
     else:
         st.success("No issues found 🎉")
 
     st.caption("Most common accessibility issues")
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # -------------------------------
-# FULL WIDTH → File Details
+# File Details Table (Styled)
 # -------------------------------
 st.divider()
 st.subheader("📋 File Details")
@@ -80,16 +135,31 @@ st.subheader("📋 File Details")
 if "files" in report:
     df = pd.DataFrame(report["files"])
 
+    # ✅ NEW: Convert timestamp column to datetime (if present)
+    if "timestamp" in df.columns:
+        df["timestamp"] = pd.to_datetime(df["timestamp"])
+
+    # ✅ NEW: Sort by latest timestamp
+    if "timestamp" in df.columns:
+        df = df.sort_values(by="timestamp", ascending=False)
+
     df["status"] = df["score"].apply(
         lambda x: "compliant" if x >= 90 else "partial" if x >= 60 else "non-compliant"
     )
 
-    st.dataframe(df, use_container_width=True)
+    def highlight_status(val):
+        color = "green" if val == "compliant" else "orange" if val == "partial" else "red"
+        return f"color: {color}; font-weight: bold"
+
+    st.dataframe(
+        df.style.applymap(highlight_status, subset=["status"]),
+        use_container_width=True
+    )
 else:
     st.info("No file-level data available")
 
 # -------------------------------
-# FULL WIDTH → Raw JSON
+# Raw JSON
 # -------------------------------
 st.subheader("🔍 Full Report")
 st.json(report)
