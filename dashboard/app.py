@@ -27,10 +27,38 @@ st.markdown("""
         background-color: white;
         box-shadow: 0 1px 5px rgba(0,0,0,0.1);
     }
+    .hackathon-tag {
+        position: fixed;
+        top: 50px;
+        right: 20px;
+        font-weight: 600;
+        font-size: 14px;
+        color: #333;
+        background: rgba(255,255,255,0.95);
+        padding: 6px 14px;
+        border-radius: 8px;
+        box-shadow: 0 1px 5px rgba(0,0,0,0.15);
+        z-index: 9999999;
+    }
+
     </style>
 """, unsafe_allow_html=True)
 
-st.title("📄 PDF Accessibility Dashboard")
+# -------------------------------
+# Render the Floating Text
+# -------------------------------
+st.markdown(
+    '<div class="hackathon-tag">Gemini CLI Technothon - Team_ASV</div>',
+    unsafe_allow_html=True
+)
+
+# -------------------------------
+# CENTER TITLE
+# -------------------------------
+st.markdown(
+    "<h1 style='text-align: center;'>📄 PDF Accessibility Dashboard</h1>",
+    unsafe_allow_html=True
+)
 
 # -------------------------------
 # Fetch API Data
@@ -47,13 +75,10 @@ if "message" in report:
     st.stop()
 
 # -------------------------------
-# TOP ROW → Summary + Status
+# SUMMARY → FULL WIDTH TILE
 # -------------------------------
-col1, col2 = st.columns(2)
-
-with col1:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.subheader("📊 Summary")
+with st.container():
+    st.markdown('<div class="card"><h3>📊 Summary</h3>', unsafe_allow_html=True)
 
     c1, c2, c3, c4 = st.columns(4)
 
@@ -70,64 +95,66 @@ with col1:
     st.markdown('</div>', unsafe_allow_html=True)
 
 # -------------------------------
-# Status Chart (Improved)
+# STATUS + ISSUE TREND ROW
 # -------------------------------
-with col2:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.subheader("📌 Status Distribution")
+col_status, col_trend = st.columns(2)
 
-    status_df = pd.DataFrame.from_dict(
-        report["status_summary"], orient="index", columns=["count"]
-    ).reset_index()
+with col_status:
+    with st.container():
+        st.markdown('<div class="card"><h3>📌 Status Distribution</h3>', unsafe_allow_html=True)
 
-    status_df.columns = ["status", "count"]
+        status_df = pd.DataFrame.from_dict(
+            report["status_summary"], orient="index", columns=["count"]
+        ).reset_index()
 
-    chart = alt.Chart(status_df).mark_bar().encode(
-        x=alt.X("status", title="Status"),
-        y=alt.Y("count", title="Count"),
-        color=alt.Color("status", scale=alt.Scale(
-            domain=["compliant", "partial", "non-compliant"],
-            range=["green", "orange", "red"]
-        ))
-    ).properties(height=300)
+        status_df.columns = ["status", "count"]
 
-    st.altair_chart(chart, use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-# -------------------------------
-# Bottom Row → Worst + Trends
-# -------------------------------
-col3, col4 = st.columns(2)
-
-with col3:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.subheader("⚠️ Worst File")
-    st.error(report["worst_file"])
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with col4:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.subheader("📈 Issue Trends")
-
-    if report.get("issue_trends"):
-        trend_df = pd.Series(report["issue_trends"]).reset_index()
-        trend_df.columns = ["issue", "count"]
-
-        trend_chart = alt.Chart(trend_df).mark_bar().encode(
-            x=alt.X("count", title="Count"),
-            y=alt.Y("issue", sort="-x"),
-            color=alt.value("#4c78a8")
+        chart = alt.Chart(status_df).mark_bar().encode(
+            x=alt.X("status", title="Status"),
+            y=alt.Y("count", title="Count"),
+            color=alt.Color("status", scale=alt.Scale(
+                domain=["compliant", "partial", "non-compliant"],
+                range=["green", "orange", "red"]
+            ))
         ).properties(height=300)
 
-        st.altair_chart(trend_chart, use_container_width=True)
-    else:
-        st.success("No issues found 🎉")
+        st.altair_chart(chart, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    st.caption("Most common accessibility issues")
-    st.markdown('</div>', unsafe_allow_html=True)
+with col_trend:
+    with st.container():
+        st.markdown('<div class="card"><h3>📈 Issue Trends</h3>', unsafe_allow_html=True)
+
+        if report.get("issue_trends"):
+            trend_df = pd.Series(report["issue_trends"]).reset_index()
+            trend_df.columns = ["issue", "count"]
+
+            trend_chart = alt.Chart(trend_df).mark_bar().encode(
+                x=alt.X("count", title="Count"),
+                y=alt.Y("issue", sort="-x"),
+                color=alt.value("#4c78a8")
+            ).properties(height=300)
+
+            st.altair_chart(trend_chart, use_container_width=True)
+        else:
+            st.success("No issues found 🎉")
+
+        st.caption("Most common accessibility issues")
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # -------------------------------
-# File Details Table (Styled)
+# WORST FILE TILE (LEFT)
+# -------------------------------
+col_worst, col_empty = st.columns([1,1])
+
+with col_worst:
+    with st.container():
+        st.markdown('<div class="card"><h3>⚠️ Worst File</h3>', unsafe_allow_html=True)
+        st.error(report["worst_file"])
+        st.markdown('</div>', unsafe_allow_html=True)
+
+# -------------------------------
+# File Details Table (Same)
 # -------------------------------
 st.divider()
 st.subheader("📋 File Details")
@@ -135,11 +162,9 @@ st.subheader("📋 File Details")
 if "files" in report:
     df = pd.DataFrame(report["files"])
 
-    # ✅ NEW: Convert timestamp column to datetime (if present)
     if "timestamp" in df.columns:
         df["timestamp"] = pd.to_datetime(df["timestamp"])
 
-    # ✅ NEW: Sort by latest timestamp
     if "timestamp" in df.columns:
         df = df.sort_values(by="timestamp", ascending=False)
 
@@ -159,7 +184,7 @@ else:
     st.info("No file-level data available")
 
 # -------------------------------
-# Raw JSON
+# Raw JSON (Same)
 # -------------------------------
 st.subheader("🔍 Full Report")
 st.json(report)
