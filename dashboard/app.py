@@ -109,17 +109,34 @@ with col_status:
 
         status_df.columns = ["status", "count"]
 
-        chart = alt.Chart(status_df).mark_bar().encode(
-            x=alt.X("status", title="Status"),
-            y=alt.Y("count", title="Count"),
-            color=alt.Color("status", scale=alt.Scale(
-                domain=["compliant", "partial", "non-compliant"],
-                range=["green", "orange", "red"]
-            ))
-        ).properties(height=300)
+    # ✅ FIX 1: Normalize values
+    status_df["status"] = status_df["status"].str.strip().str.lower()
 
-        st.altair_chart(chart, use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+    # ✅ FIX 2: Ensure all categories exist
+    all_status = ["compliant", "partial", "non-compliant"]
+    status_df = status_df.set_index("status").reindex(all_status, fill_value=0).reset_index()
+
+    # ✅ Calculate percentage
+    total = status_df["count"].sum()
+    status_df["percentage"] = (status_df["count"] / total * 100).round(1)
+
+    # ✅ Donut Chart
+    chart = alt.Chart(status_df).mark_arc(innerRadius=70).encode(
+        theta=alt.Theta(field="count", type="quantitative"),
+        color=alt.Color("status", scale=alt.Scale(
+            domain=all_status,
+            range=["green", "orange", "red"]
+        )),
+        tooltip=[
+            alt.Tooltip("status", title="Status"),
+            alt.Tooltip("count", title="Count"),
+            alt.Tooltip("percentage", title="%", format=".1f")
+        ]
+    ).properties(height=300)
+
+    st.altair_chart(chart, use_container_width=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
 with col_trend:
     with st.container():
