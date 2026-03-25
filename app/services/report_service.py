@@ -20,7 +20,7 @@ def generate_report():
     total_issues = sum(len(r["issues"]) for r in results)
 
     avg_score = sum(r["score"] for r in results) / total_files
-    worst_file = min(results, key=lambda x: x["score"])["file"]
+    worst_file = min(results, key=lambda x: x.get("score", 0)).get("file")
 
     status_summary = {"compliant": 0, "partial": 0, "non_compliant": 0}
 

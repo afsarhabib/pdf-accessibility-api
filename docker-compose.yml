@@ -16,4 +16,4 @@ services:
     depends_on:
       - app
     environment:
-      - API_URL=http://app:8000/report
+      - API_URL=http://app:8000/api/v1/dashboard

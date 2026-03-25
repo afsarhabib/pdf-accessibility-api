@@ -2,7 +2,7 @@ import os
 import requests
 import streamlit as st
 
-API_URL = os.getenv("API_URL", "http://app:8000/report")
+API_URL = os.getenv("API_URL", "http://app:8000/api/v1/dashboard")
 
 @st.cache_data(ttl=30)
 def fetch_report():
