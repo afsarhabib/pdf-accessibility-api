@@ -16,10 +16,9 @@ st.markdown("""
     .card {
         padding: 20px;
         border-radius: 12px;
-        background-color: #f0f8ff;
+        background-color: #f9fafb;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         margin-bottom: 15px;
-        border: 1px solid #000000;      
     }
     .metric {
         text-align: center;
@@ -27,12 +26,7 @@ st.markdown("""
         border-radius: 10px;
         background-color: white;
         box-shadow: 0 1px 5px rgba(0,0,0,0.1);
-        border: 1px solid #000000;    
     }
-    .vega-embed {
-        border: 1px solid #000000;   /* black border */
-        border-radius: 5px;
-    }        
     .hackathon-tag {
         position: fixed;
         top: 50px;
@@ -40,7 +34,7 @@ st.markdown("""
         font-weight: 600;
         font-size: 14px;
         color: #333;
-        background: rgba(59, 130, 246, 0.95);
+        background: rgba(255,255,255,0.95);
         padding: 6px 14px;
         border-radius: 8px;
         box-shadow: 0 1px 5px rgba(0,0,0,0.15);
@@ -84,7 +78,7 @@ if "message" in report:
 # SUMMARY → FULL WIDTH TILE
 # -------------------------------
 with st.container():
-    st.markdown('<div class="card"><h3 style="text-align: center;">📊 Summary</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="card"><h3>📊 Summary</h3>', unsafe_allow_html=True)
 
     c1, c2, c3, c4 = st.columns(4)
 
@@ -93,10 +87,10 @@ with st.container():
     c3.markdown(f'<div class="metric">✅<br><b>{report.get("total_fixed",0)}</b><br>Fixed</div>', unsafe_allow_html=True)
     c4.markdown(f'<div class="metric">📈<br><b>{report["average_score"]}%</b><br>Avg Score</div>', unsafe_allow_html=True)
 
-    # if report["total_issues"] == 0:
-    #     st.success("All files compliant 🎉")
-    # else:
-    #     st.warning(f"{report['total_issues']} issues detected")
+    if report["total_issues"] == 0:
+        st.success("All files compliant 🎉")
+    else:
+        st.warning(f"{report['total_issues']} issues detected")
 
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -107,111 +101,73 @@ col_status, col_trend = st.columns(2)
 
 with col_status:
     with st.container():
-            st.markdown('<div class="card"><h3 style="text-align: center;">📌 Status Distribution</h3>', unsafe_allow_html=True)
+        st.markdown('<div class="card"><h3>📌 Status Distribution</h3>', unsafe_allow_html=True)
 
-            status_df = pd.DataFrame.from_dict(
-                report["status_summary"], orient="index", columns=["count"]
-            ).reset_index()
+        status_df = pd.DataFrame.from_dict(
+            report["status_summary"], orient="index", columns=["count"]
+        ).reset_index()
 
-            status_df.columns = ["status", "count"]
+        status_df.columns = ["status", "count"]
 
-            # ✅ FIX 1: Normalize values
-            status_df["status"] = status_df["status"].str.strip().str.lower()
+    # ✅ FIX 1: Normalize values
+    status_df["status"] = status_df["status"].str.strip().str.lower()
 
-            # ✅ FIX 2: Ensure all categories exist
-            all_status = ["compliant", "partial", "non-compliant"]
-            status_df = status_df.set_index("status").reindex(all_status, fill_value=0).reset_index()
+    # ✅ FIX 2: Ensure all categories exist
+    all_status = ["compliant", "partial", "non-compliant"]
+    status_df = status_df.set_index("status").reindex(all_status, fill_value=0).reset_index()
 
-            # ✅ Calculate percentage
-            total = status_df["count"].sum()
-            status_df["percentage"] = (status_df["count"] / total * 100).round(1)
+    # ✅ Calculate percentage
+    total = status_df["count"].sum()
+    status_df["percentage"] = (status_df["count"] / total * 100).round(1)
 
-            # ✅ Donut Chart
-            chart = alt.Chart(status_df).mark_arc(innerRadius=70).encode(
-                theta=alt.Theta(field="count", type="quantitative"),
-                color=alt.Color("status", scale=alt.Scale(
-                    domain=all_status,
-                    range=["green", "orange", "red"]
-                )),
-                tooltip=[
-                    alt.Tooltip("status", title="Status"),
-                    alt.Tooltip("count", title="Count"),
-                    alt.Tooltip("percentage", title="%", format=".1f")
-                ]
-            ).properties(height=300).configure_legend(orient="top-right")   
+    # ✅ Donut Chart
+    chart = alt.Chart(status_df).mark_arc(innerRadius=70).encode(
+        theta=alt.Theta(field="count", type="quantitative"),
+        color=alt.Color("status", scale=alt.Scale(
+            domain=all_status,
+            range=["green", "orange", "red"]
+        )),
+        tooltip=[
+            alt.Tooltip("status", title="Status"),
+            alt.Tooltip("count", title="Count"),
+            alt.Tooltip("percentage", title="%", format=".1f")
+        ]
+    ).properties(height=300)
 
-            st.altair_chart(chart, use_container_width=True)
+    st.altair_chart(chart, use_container_width=True)
 
-            st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 with col_trend:
     with st.container():
-            st.markdown('<div class="card"><h3 style="text-align: center;">📈 Issue Trends</h3>', unsafe_allow_html=True)
+        st.markdown('<div class="card"><h3>📈 Issue Trends</h3>', unsafe_allow_html=True)
 
-            if report.get("issue_trends"):
-                trend_df = pd.Series(report["issue_trends"]).reset_index()
-                trend_df.columns = ["issue", "count"]
+        if report.get("issue_trends"):
+            trend_df = pd.Series(report["issue_trends"]).reset_index()
+            trend_df.columns = ["issue", "count"]
 
-                trend_chart = alt.Chart(trend_df).mark_bar().encode(
-                    x=alt.X(
-                        "count",
-                        title="Count",
-                        axis=alt.Axis(format="d", tickMinStep=1)   
-                    ),
-                    y=alt.Y("issue", sort="-x"),
-                    color=alt.value("#4c78a8")
-                ).properties(height=300)
+            trend_chart = alt.Chart(trend_df).mark_bar().encode(
+                x=alt.X("count", title="Count"),
+                y=alt.Y("issue", sort="-x"),
+                color=alt.value("#4c78a8")
+            ).properties(height=300)
 
-                st.altair_chart(trend_chart, use_container_width=True)
-            else:
-                st.success("No issues found 🎉")
+            st.altair_chart(trend_chart, use_container_width=True)
+        else:
+            st.success("No issues found 🎉")
 
-            st.markdown('</div>', unsafe_allow_html=True)
+        st.caption("Most common accessibility issues")
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # -------------------------------
 # WORST FILE TILE (LEFT)
 # -------------------------------
-#col_worst, col_empty = st.columns([1,1])
+col_worst, col_empty = st.columns([1,1])
 
-#with col_worst:
-with st.container():
-        st.markdown('<div class="card"><h3 style="text-align: center;">⚠️ Error Trend </h3>', unsafe_allow_html=True)
-        
-        if "files" in report:
-            df_trend = pd.DataFrame(report["files"])
-
-            # Convert timestamp
-            df_trend["timestamp"] = pd.to_datetime(df_trend["timestamp"])
-
-            # Count issues per file
-            df_trend["issue_count"] = df_trend["issues"].apply(len)
-
-            # Aggregate by date
-            trend_line_df = df_trend.groupby("timestamp")["issue_count"].sum().reset_index()
-
-            # Line chart
-            line_chart = alt.Chart(trend_line_df).mark_line(point=True).encode(
-                x=alt.X(
-                    "yearmonthdate(timestamp):T",   # ✅ date only
-                    title="Date",
-                    axis=alt.Axis(format="%Y-%m-%d")  # optional formatting
-                ),
-                y=alt.Y(
-                    "issue_count:Q",
-                    title="Total Issues",
-                    axis=alt.Axis(format="d", tickMinStep=1)  # integers only
-                ),
-                tooltip=[
-                    alt.Tooltip("timestamp:T", title="Date"),
-                    alt.Tooltip("issue_count:Q", title="Issues")
-                ]
-            ).properties(height=300,width="container")
-
-            st.altair_chart(line_chart, use_container_width=True)
-
-        else:
-            st.info("No trend data available")
-
+with col_worst:
+    with st.container():
+        st.markdown('<div class="card"><h3>⚠️ Worst File</h3>', unsafe_allow_html=True)
+        st.error(report["worst_file"])
         st.markdown('</div>', unsafe_allow_html=True)
 
 # -------------------------------
