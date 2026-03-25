@@ -19,35 +19,52 @@ def generate_report():
     total_files = len(results)
     total_issues = sum(len(r["issues"]) for r in results)
 
-    avg_score = sum(r["score"] for r in results) / total_files
-    worst_file = min(results, key=lambda x: x.get("score", 0)).get("file")
+    # Compliance breakdown
+    compliant = sum(1 for r in results if r["complianceStatus"] == "compliant")
+    non_compliant = total_files - compliant
 
-    status_summary = {"compliant": 0, "partial": 0, "non_compliant": 0}
+    compliance_breakdown = {
+        "compliant": compliant,
+        "nonCompliant": non_compliant
+    }
+
+    # Worst file
+    worst = max(results, key=lambda x: x.get("nonCompliancePercent", 0))
+
+    worst_file = {
+        "fileName": worst.get("fileName"),
+        "nonCompliancePercent": worst.get("nonCompliancePercent")
+    }
+
+    # Collect issue types
+    issue_counter = Counter()
 
     for r in results:
-        if r["score"] >= 90:
-            status_summary["compliant"] += 1
-        elif r["score"] >= 60:
-            status_summary["partial"] += 1
-        else:
-            status_summary["non_compliant"] += 1
+        for issue in r["issues"]:
+            key = issue.get("description")
+            issue_counter[key] += 1
 
-    # Collect all issues
-    all_issues = []
+    top_issue_types = [
+        {"issue": k, "count": v}
+        for k, v in issue_counter.items()
+    ]
+
+    # Standard violation frequency
+    standard_counter = Counter()
+
     for r in results:
-        all_issues.extend(r["issues"])
+        for issue in r["issues"]:
+            standard = issue.get("standard")
+            standard_counter[standard] += 1
 
-    # Count occurrences
-    issue_trends = dict(Counter(all_issues))
-    total_fixed = sum(1 for r in results if r.get("fixed"))
+    standard_violation_frequency = dict(standard_counter)
 
     return {
-        "total_files": total_files,
-        "total_issues": total_issues,
-        "average_score": round(avg_score, 2),
-        "worst_file": worst_file,
-        "status_summary": status_summary,
-        "issue_trends": issue_trends,
-        "total_fixed": total_fixed,
+        "totalFiles": total_files,
+        "totalIssues": total_issues,
+        "complianceBreakdown": compliance_breakdown,
+        "topIssueTypes": top_issue_types,
+        "standardViolationFrequency": standard_violation_frequency,
+        "worstFile": worst_file,
         "files": results
     }
