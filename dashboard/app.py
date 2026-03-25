@@ -1,8 +1,3 @@
-# import sys
-# import os
-#
-# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 import streamlit as st
 import pandas as pd
 import altair as alt
@@ -156,6 +151,6 @@ df["status"] = df["score"].apply(get_status)
 
 search = st.text_input("🔍 Search file")
 if search:
-    df = df[df["file_name"].str.contains(search, case=False)]
+    df = df[df["file"].str.contains(search, case=False)]
 
 st.dataframe(df, use_container_width=True)

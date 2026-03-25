@@ -7,4 +7,4 @@ class FileScanResult(BaseModel):
     issues: List[str]
 
 class ScanResponse(BaseModel):
-    results: List[FileScanResult]
+    files: List[FileScanResult]

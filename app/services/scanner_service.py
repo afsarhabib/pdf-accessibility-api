@@ -1,10 +1,12 @@
 from PyPDF2 import PdfReader
 import json
 import os
+from datetime import datetime
 
 RESULT_FILE = "/app/scan_results.json"
 
-def scan_files(file_paths: list[str]) -> dict:
+
+def scan_files(file_paths: list[str]) -> list:
     results = [scan_single_file(f) for f in file_paths]
 
     with open(RESULT_FILE, "w") as f:
@@ -12,7 +14,8 @@ def scan_files(file_paths: list[str]) -> dict:
 
     print("Saved results to:", RESULT_FILE)
 
-    return {"results": results}
+    return results
+
 
 def scan_single_file(file_path: str) -> dict:
     issues = []
@@ -23,8 +26,6 @@ def scan_single_file(file_path: str) -> dict:
         reader = PdfReader(file_path)
 
         # Check 1: Metadata
-        # Replace metadata check with stricter version
-
         if reader.metadata and reader.metadata.title:
             passed += 1
         else:
@@ -48,14 +49,10 @@ def scan_single_file(file_path: str) -> dict:
 
     score = (passed / total_checks) * 100 if total_checks else 0
 
-    #temp
-    if "Missing document title metadata" not in issues:
-        issues.append("Missing document title metadata")
-        issues.append("No text layer (scanned PDF)")
-
     return {
         "file": file_path,
         "score": round(score, 2),
         "issues": issues,
-        "fixed": False
+        "fixed": False,
+        "timestamp": datetime.utcnow().isoformat()
     }
