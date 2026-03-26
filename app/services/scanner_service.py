@@ -69,11 +69,21 @@ def scan_single_file(file_path: str) -> dict:
         }
 
     score = (passed / total_checks) * 100 if total_checks else 0
+    # convert issues to structured format
+    structured_issues = [
+        {
+            "description": issue,
+            "fix": "Add OCR text layer or ensure selectable text is present for accessibility."
+            if "text layer" in issue.lower() or "scanned" in issue.lower()
+            else "Review and fix the reported accessibility issue."
+        }
+        for issue in issues
+    ]
 
     return {
         "file": file_path,
         "score": round(score, 2),
-        "issues": issues,
+        "issues": structured_issues,
         "totalIssues": total_issues,
         "totalFixable": total_fixable,
         "fixed": False,
