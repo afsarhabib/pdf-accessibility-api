@@ -17,8 +17,10 @@ def scan_files(file_paths: list[str]) -> list:
     return results
 
 
+
 def scan_single_file(file_path: str) -> dict:
     issues = []
+    fixable_issues = []
     total_checks = 3
     passed = 0
 
@@ -29,23 +31,42 @@ def scan_single_file(file_path: str) -> dict:
         if reader.metadata and reader.metadata.title:
             passed += 1
         else:
-            issues.append("Missing document title metadata")
+            msg = "Missing document title metadata"
+            issues.append(msg)
+            fixable_issues.append(msg)  # assuming fixable
 
         # Check 2: Text layer
         if any(page.extract_text() for page in reader.pages):
             passed += 1
         else:
-            issues.append("No text layer (scanned PDF)")
+            msg = "No text layer (scanned PDF)"
+            issues.append(msg)
+            # not easily fixable → don't add to fixable_issues
 
         # Check 3: Empty pages
         empty_pages = sum(1 for p in reader.pages if not p.extract_text())
         if empty_pages == 0:
             passed += 1
         else:
-            issues.append(f"{empty_pages} empty pages")
+            msg = f"{empty_pages} empty pages"
+            issues.append(msg)
+            fixable_issues.append(msg)  # assuming fixable
 
     except Exception as e:
         issues.append(f"Error reading file: {str(e)}")
+
+    total_issues = len(issues)
+    total_fixable = len(fixable_issues)
+
+    # ✅ Consistency Check
+    if total_fixable > total_issues:
+        return {
+            "file": file_path,
+            "error": "Inconsistent counts: totalFixable exceeds totalIssues",
+            "totalIssues": total_issues,
+            "totalFixable": total_fixable,
+            "timestamp": datetime.utcnow().isoformat()
+        }
 
     score = (passed / total_checks) * 100 if total_checks else 0
 
@@ -53,6 +74,8 @@ def scan_single_file(file_path: str) -> dict:
         "file": file_path,
         "score": round(score, 2),
         "issues": issues,
+        "totalIssues": total_issues,
+        "totalFixable": total_fixable,
         "fixed": False,
         "timestamp": datetime.utcnow().isoformat()
     }
